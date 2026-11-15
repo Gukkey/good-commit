@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Copy, 
   Check, 
@@ -7,10 +7,10 @@ import {
   AlertTriangle, 
   Info, 
   AlertCircle,
-  FileCode,
-  Share2
+  RotateCcw,
+  TerminalSquare
 } from 'lucide-react';
-import { formatCommit, generateGitCommand, validateCommit, resolveGitmoji } from '../utils/commitFormatter';
+import { formatCommit, validateCommit } from '../utils/commitFormatter';
 import GitGraphPreview from './GitGraphPreview';
 
 export default function PreviewCard({
@@ -18,29 +18,58 @@ export default function PreviewCard({
   onSaveToHistory,
 }) {
   const [copySuccess, setCopySuccess] = useState('');
-  const [commandStyle, setCommandStyle] = useState('raw'); // 'raw' | 'multiple-m' | 'single' | 'heredoc'
+  const [message, setMessage] = useState('');
+  const [isManuallyEdited, setIsManuallyEdited] = useState(false);
 
-  const { header, body, footers, fullMessage, resolvedEmoji } = formatCommit(commitData);
-  const gitCommand = generateGitCommand(commitData, commandStyle === 'raw' ? 'multiple-m' : commandStyle);
+  const { fullMessage } = formatCommit(commitData);
   const validationIssues = validateCommit(commitData);
 
-  const textToCopy = commandStyle === 'raw' ? fullMessage : gitCommand;
+  // Sync textarea whenever generator options change, unless user manually tweaked it
+  useEffect(() => {
+    if (!isManuallyEdited) {
+      setMessage(fullMessage);
+    }
+  }, [fullMessage, isManuallyEdited]);
 
-  const handleCopy = async () => {
+  // When user edits the message directly in the textarea
+  const handleTextareaChange = (e) => {
+    setMessage(e.target.value);
+    setIsManuallyEdited(true);
+  };
+
+  // Re-sync to the form values
+  const handleReset = () => {
+    setMessage(fullMessage);
+    setIsManuallyEdited(false);
+  };
+
+  // Copy raw message text
+  const handleCopyMessage = async () => {
     try {
-      await navigator.clipboard.writeText(textToCopy);
-      setCopySuccess('copied');
+      await navigator.clipboard.writeText(message);
+      setCopySuccess('message');
       setTimeout(() => setCopySuccess(''), 2000);
     } catch (err) {
       console.error('Failed to copy', err);
     }
   };
 
-  const handleCopyCommand = async (style) => {
+  // In Git, multiple -m flags automatically concatenate as separate paragraphs (multiline)
+  const generateMultiLineGitCommand = (text) => {
+    const paragraphs = text.split(/\n\n+/).filter(Boolean);
+    if (paragraphs.length === 0) {
+      return `git commit -m "${text.replace(/"/g, '\\"')}"`;
+    }
+    const flags = paragraphs.map((p) => `-m "${p.replace(/"/g, '\\"')}"`);
+    return `git commit ${flags.join(' ')}`;
+  };
+
+  // Copy git command with multiple -m flags for multiline commit
+  const handleCopyCommand = async () => {
     try {
-      const cmd = generateGitCommand(commitData, style);
+      const cmd = generateMultiLineGitCommand(message);
       await navigator.clipboard.writeText(cmd);
-      setCopySuccess(style);
+      setCopySuccess('command');
       setTimeout(() => setCopySuccess(''), 2000);
     } catch (err) {
       console.error('Failed to copy', err);
@@ -49,11 +78,10 @@ export default function PreviewCard({
 
   return (
     <div className="space-y-4">
-      {/* Terminal Preview Card */}
+      {/* Simple, Direct Textarea Box */}
       <div className="rounded-2xl border border-slate-700/60 bg-slate-950 text-slate-100 shadow-xl overflow-hidden">
-        {/* Terminal Title Bar */}
-        <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-          {/* macOS window dots */}
+        {/* Title Bar */}
+        <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
@@ -61,195 +89,135 @@ export default function PreviewCard({
               <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
             </div>
             <div className="h-4 w-[1px] bg-slate-700 mx-1" />
-            <div className="flex items-center gap-1.5 text-xs font-mono text-slate-400">
+            <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 font-semibold">
               <Terminal className="w-3.5 h-3.5 text-indigo-400" />
-              <span>commit-preview.txt</span>
+              <span>Commit Message</span>
             </div>
           </div>
 
-          {/* View Mode Selector */}
-          <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-lg border border-slate-800 text-xs">
-            <button
-              type="button"
-              onClick={() => setCommandStyle('raw')}
-              className={`px-2.5 py-1 rounded font-mono text-[11px] transition-all ${
-                commandStyle === 'raw'
-                  ? 'bg-indigo-600 text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Raw Message
-            </button>
-            <button
-              type="button"
-              onClick={() => setCommandStyle('multiple-m')}
-              className={`px-2.5 py-1 rounded font-mono text-[11px] transition-all ${
-                commandStyle === 'multiple-m'
-                  ? 'bg-indigo-600 text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              git -m
-            </button>
-            <button
-              type="button"
-              onClick={() => setCommandStyle('heredoc')}
-              className={`px-2.5 py-1 rounded font-mono text-[11px] transition-all ${
-                commandStyle === 'heredoc'
-                  ? 'bg-indigo-600 text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              heredoc
-            </button>
-          </div>
-        </div>
-
-        {/* Terminal Content Area with Syntax Highlighting */}
-        <div className="p-4 sm:p-5 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto min-h-[140px] select-text">
-          {commandStyle === 'raw' ? (
-            <div className="space-y-4">
-              {/* Header Line with Gitmoji highlighting */}
-              <div className="flex flex-wrap items-baseline gap-x-1">
-                {/* Prefix Gitmoji if position is 'before-type' */}
-                {commitData.useGitmoji && resolvedEmoji && commitData.gitmojiPosition === 'before-type' && (
-                  <span className="text-amber-400 font-bold mr-1">
-                    {resolvedEmoji}
-                  </span>
-                )}
-
-                {/* Type */}
-                <span className="font-bold text-indigo-400">{commitData.type}</span>
-
-                {/* Scope */}
-                {commitData.scope && (
-                  <span className="text-cyan-400">({commitData.scope})</span>
-                )}
-
-                {/* Breaking Change mark */}
-                {commitData.isBreaking && (
-                  <span className="font-extrabold text-rose-500">!</span>
-                )}
-
-                <span className="text-slate-400 font-bold">:</span>
-
-                {/* Gitmoji after type */}
-                {commitData.useGitmoji && resolvedEmoji && commitData.gitmojiPosition !== 'before-type' && (
-                  <span className="text-amber-400 font-bold mx-1">
-                    {resolvedEmoji}
-                  </span>
-                )}
-
-                {/* Description */}
-                <span className="text-white font-medium ml-1">
-                  {commitData.description || (
-                    <span className="text-slate-600 italic">your commit description...</span>
-                  )}
+          <div className="flex items-center gap-2 text-xs font-mono">
+            {isManuallyEdited ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  edited
                 </span>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-indigo-400 transition-colors"
+                  title="Re-sync with generator form"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Re-sync</span>
+                </button>
               </div>
-
-              {/* Body */}
-              {body && (
-                <div className="text-slate-300 whitespace-pre-wrap border-l-2 border-slate-800 pl-3 py-0.5">
-                  {body}
-                </div>
-              )}
-
-              {/* Footers */}
-              {footers.length > 0 && (
-                <div className="space-y-1 pt-1 border-t border-slate-800/80">
-                  {footers.map((footer, i) => {
-                    const isBreakingFooter = footer.startsWith('BREAKING CHANGE');
-                    const isIssueFooter = /^(Closes|Fixes|Resolves|Refs|See also)/.test(footer);
-                    const isCoAuthor = footer.startsWith('Co-authored-by:');
-
-                    return (
-                      <div key={i} className="text-xs">
-                        {isBreakingFooter ? (
-                          <span className="text-rose-400 font-bold bg-rose-950/40 px-1 py-0.5 rounded border border-rose-900/40">
-                            {footer}
-                          </span>
-                        ) : isIssueFooter ? (
-                          <span className="text-emerald-400 font-medium">{footer}</span>
-                        ) : isCoAuthor ? (
-                          <span className="text-violet-400">{footer}</span>
-                        ) : (
-                          <span className="text-cyan-300">{footer}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <pre className="text-emerald-400 whitespace-pre-wrap break-all">
-              {commandStyle === 'heredoc'
-                ? generateGitCommand(commitData, 'heredoc')
-                : generateGitCommand(commitData, commandStyle)}
-            </pre>
-          )}
+            ) : (
+              <span className="text-[11px] text-slate-500">live sync active</span>
+            )}
+          </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="px-4 py-3 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-400 font-mono">
-              Chars: <strong className="text-slate-200">{fullMessage.length}</strong> | Lines: <strong className="text-slate-200">{fullMessage.split('\n').length}</strong>
-            </span>
+        {/* The Direct Textarea: Editable right here, anytime */}
+        <div className="p-3 bg-slate-950">
+          <textarea
+            rows={10}
+            value={message}
+            onChange={handleTextareaChange}
+            placeholder="Your commit message will appear here. You can directly edit or polish it anytime..."
+            className="w-full p-3 font-mono text-xs sm:text-sm leading-relaxed bg-slate-900/80 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y"
+          />
+        </div>
+
+        {/* Footer info & actions */}
+        <div className="px-4 py-3 bg-slate-900/90 border-t border-slate-800 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[11px] text-slate-400 font-mono">
+              Chars: <strong className="text-slate-200">{message.length}</strong> | Lines: <strong className="text-slate-200">{message.split('\n').length}</strong>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Save Button */}
+              <button
+                type="button"
+                onClick={() => onSaveToHistory(message)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 transition-colors"
+                title="Save to local history"
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span>Save</span>
+              </button>
+
+              {/* Copy Git Command (using multiple -m for multiline paragraphs) */}
+              <button
+                type="button"
+                onClick={handleCopyCommand}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  copySuccess === 'command'
+                    ? 'bg-emerald-600 text-white border-emerald-500'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                }`}
+                title="Copies git commit command with multiple -m flags for multiline paragraphs"
+              >
+                {copySuccess === 'command' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-white" />
+                    <span>Copied git cmd!</span>
+                  </>
+                ) : (
+                  <>
+                    <TerminalSquare className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Copy git -m</span>
+                  </>
+                )}
+              </button>
+
+              {/* Copy Raw Message */}
+              <button
+                type="button"
+                onClick={handleCopyMessage}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold shadow-md transition-all ${
+                  copySuccess === 'message'
+                    ? 'bg-emerald-600 text-white shadow-emerald-500/20'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 active:scale-95'
+                }`}
+              >
+                {copySuccess === 'message' ? (
+                  <>
+                    <Check className="w-4 h-4 text-white" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Message</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Save to History Button */}
-            <button
-              type="button"
-              onClick={() => onSaveToHistory(fullMessage)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 transition-colors"
-              title="Save to local history"
-            >
-              <Bookmark className="w-3.5 h-3.5" />
-              <span>Save</span>
-            </button>
-
-            {/* Copy Button */}
-            <button
-              type="button"
-              onClick={handleCopy}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold shadow-md transition-all ${
-                copySuccess === 'copied'
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 active:scale-95'
-              }`}
-            >
-              {copySuccess === 'copied' ? (
-                <>
-                  <Check className="w-4 h-4 text-white" />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>{commandStyle === 'raw' ? 'Copy Message' : 'Copy Command'}</span>
-                </>
-              )}
-            </button>
+          {/* Explanation note for multiple -m flags */}
+          <div className="text-[11px] text-slate-500 flex items-center justify-between">
+            <span>
+              💡 In Git, multiple <code className="text-slate-400 font-mono font-semibold">-m</code> flags create separate paragraphs (header, body, footers).
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Git Graph Visualizer */}
+      {/* Visual Git Log Graph */}
       <GitGraphPreview
         type={commitData.type}
         scope={commitData.scope}
         isBreaking={commitData.isBreaking}
-        description={commitData.description}
+        description={isManuallyEdited ? message.split('\n')[0] : commitData.description}
         useGitmoji={commitData.useGitmoji}
         gitmoji={commitData.gitmoji}
         gitmojiFormat={commitData.gitmojiFormat}
         gitmojiPosition={commitData.gitmojiPosition}
       />
 
-      {/* Linter & Best Practice Feedback */}
+      {/* Linter Feedback */}
       {validationIssues.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
