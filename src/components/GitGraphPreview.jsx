@@ -66,7 +66,10 @@ export default function GitGraphPreview({
               <span>{emojiStr}</span>
             )}
 
-            <span className="text-slate-100 truncate max-w-sm sm:max-w-md">
+            <span 
+              className="text-slate-100 truncate max-w-sm sm:max-w-md cursor-help"
+              title={displayDesc}
+            >
               {displayDesc}
             </span>
           </div>

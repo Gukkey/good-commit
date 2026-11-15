@@ -79,13 +79,15 @@ export default function GitmojiPicker({
                 ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
                 : 'text-slate-500 border-slate-200 dark:border-slate-700 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
-            title="Automatically match gitmoji with selected Conventional Commit type"
           >
             Auto-sync: <strong className="font-bold">{autoSyncType ? 'ON' : 'OFF'}</strong>
           </button>
 
           {/* Currently selected gitmoji badge */}
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-md text-amber-700 dark:text-amber-300 text-xs">
+          <div 
+            className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-md text-amber-700 dark:text-amber-300 text-xs"
+            title={currentGitmojiObj.description}
+          >
             <span className="text-base">{currentGitmojiObj.emoji}</span>
             <span className="font-mono text-[11px] font-bold">{currentGitmojiObj.code}</span>
           </div>
@@ -133,7 +135,6 @@ export default function GitmojiPicker({
                   ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs font-semibold'
                   : 'text-slate-600 dark:text-slate-400'
               }`}
-              title="feat(scope): :emoji: description"
             >
               type: :emoji: desc
             </button>
@@ -145,7 +146,6 @@ export default function GitmojiPicker({
                   ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs font-semibold'
                   : 'text-slate-600 dark:text-slate-400'
               }`}
-              title=":emoji: type(scope): description"
             >
               :emoji: type: desc
             </button>
@@ -153,7 +153,7 @@ export default function GitmojiPicker({
         </div>
       </div>
 
-      {/* Permanently Open Search, Filter, and Grid */}
+      {/* Search, Filter, and Grid */}
       <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
         {/* Search and SemVer filter bar */}
         <div className="flex flex-col sm:flex-row gap-2">
@@ -205,6 +205,7 @@ export default function GitmojiPicker({
           ) : (
             filteredGitmojis.map((item) => {
               const isSelected = gitmoji === item.code;
+
               return (
                 <button
                   key={item.code}
@@ -213,6 +214,7 @@ export default function GitmojiPicker({
                     onSelectGitmoji(item.code);
                     if (autoSyncType) onToggleAutoSync(false);
                   }}
+                  title={item.description}
                   className={`flex items-start gap-2.5 p-2 rounded-lg text-left border transition-all ${
                     isSelected
                       ? 'bg-amber-50/90 dark:bg-amber-950/50 border-amber-500 ring-2 ring-amber-500/40 shadow-xs'
@@ -247,7 +249,9 @@ export default function GitmojiPicker({
         {/* Status bar */}
         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 font-mono">
           <span>Showing {filteredGitmojis.length} of {GITMOJIS.length} gitmojis</span>
-          <span>Selected: <strong className="text-slate-700 dark:text-slate-200">{currentGitmojiObj.emoji} {currentGitmojiObj.name}</strong></span>
+          <span>
+            Selected: <strong className="text-slate-700 dark:text-slate-200">{currentGitmojiObj.emoji} {currentGitmojiObj.name}</strong>
+          </span>
         </div>
       </div>
     </div>

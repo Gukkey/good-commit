@@ -1,14 +1,14 @@
-import React from 'react';
-import { 
-  GitCommit, 
-  Sun, 
-  Moon, 
-  HelpCircle, 
-  History, 
+import React from "react";
+import {
+  GitCommit,
+  Sun,
+  Moon,
+  HelpCircle,
+  History,
   Sparkles,
-  RotateCcw
-} from 'lucide-react';
-import { QUICK_TEMPLATES } from '../constants/commitTypes';
+  RotateCcw,
+} from "lucide-react";
+import { QUICK_TEMPLATES } from "../constants/commitTypes";
 
 export default function Header({
   isDark,
@@ -32,7 +32,7 @@ export default function Header({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                GoodCommit<span className="text-indigo-500">.</span>
+                good-commit<span className="text-indigo-500">.</span>
               </span>
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">
                 v1.0.0 Spec
@@ -53,13 +53,15 @@ export default function Header({
               onChange={(e) => {
                 if (e.target.value) {
                   onApplyTemplate(e.target.value);
-                  e.target.value = '';
+                  e.target.value = "";
                 }
               }}
               defaultValue=""
               className="text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="" disabled>Presets / Templates ▾</option>
+              <option value="" disabled>
+                Presets / Templates ▾
+              </option>
               {QUICK_TEMPLATES.map((tmpl) => (
                 <option key={tmpl.id} value={tmpl.id}>
                   {tmpl.name}

@@ -55,6 +55,7 @@ export default function TypeSelector({ selectedType, onSelectType }) {
               key={item.type}
               type="button"
               onClick={() => onSelectType(item.type)}
+              title={item.description}
               className={`group relative flex flex-col p-2.5 rounded-xl border text-left transition-all ${
                 isSelected
                   ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/30 dark:ring-indigo-500/20 shadow-sm'
@@ -72,7 +73,7 @@ export default function TypeSelector({ selectedType, onSelectType }) {
               <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">
                 {item.type}
               </span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate w-full">
                 {item.title}
               </span>
             </button>
