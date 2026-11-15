@@ -5,11 +5,13 @@ import ScopeManager from './components/ScopeManager';
 import HeaderInput from './components/HeaderInput';
 import BodyInput from './components/BodyInput';
 import FootersManager from './components/FootersManager';
+import GitmojiPicker from './components/GitmojiPicker';
 import PreviewCard from './components/PreviewCard';
 import CommitHistoryModal from './components/CommitHistoryModal';
 import CheatSheetModal from './components/CheatSheetModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { COMMON_SCOPES_PRESETS, QUICK_TEMPLATES } from './constants/commitTypes';
+import { TYPE_TO_GITMOJI, BREAKING_GITMOJI } from './constants/gitmojis';
 
 export default function App() {
   // Theme state persisted in localStorage
@@ -37,8 +39,15 @@ export default function App() {
   // Commit history in localStorage
   const [history, setHistory] = useLocalStorage('goodcommit_history', []);
 
+  // Gitmoji preferences in localStorage
+  const [useGitmoji, setUseGitmoji] = useLocalStorage('goodcommit_use_gitmoji', true);
+  const [gitmojiFormat, setGitmojiFormat] = useLocalStorage('goodcommit_gitmoji_format', 'emoji');
+  const [gitmojiPosition, setGitmojiPosition] = useLocalStorage('goodcommit_gitmoji_position', 'after-type');
+  const [autoSyncGitmoji, setAutoSyncGitmoji] = useState(true);
+
   // Form states
   const [type, setType] = useState('feat');
+  const [gitmoji, setGitmoji] = useState(':sparkles:');
   const [scope, setScope] = useState('');
   const [isBreaking, setIsBreaking] = useState(false);
   const [description, setDescription] = useState('');
@@ -51,6 +60,27 @@ export default function App() {
   // Modals state
   const [isCheatSheetOpen, setIsCheatSheetOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Auto-sync gitmoji when type changes if autoSync is active
+  const handleSelectType = (newType) => {
+    setType(newType);
+    if (autoSyncGitmoji) {
+      if (isBreaking) {
+        setGitmoji(BREAKING_GITMOJI);
+      } else if (TYPE_TO_GITMOJI[newType]) {
+        setGitmoji(TYPE_TO_GITMOJI[newType]);
+      }
+    }
+  };
+
+  const handleToggleBreaking = (breaking) => {
+    setIsBreaking(breaking);
+    if (breaking && autoSyncGitmoji) {
+      setGitmoji(BREAKING_GITMOJI);
+    } else if (!breaking && autoSyncGitmoji && TYPE_TO_GITMOJI[type]) {
+      setGitmoji(TYPE_TO_GITMOJI[type]);
+    }
+  };
 
   // Scope caching handlers
   const handleAddScope = (newScope) => {
@@ -132,7 +162,12 @@ export default function App() {
     setCoAuthors(data.coAuthors || []);
     setCustomFooters(data.customFooters || []);
 
-    // Cache the template's scope if not present
+    if (data.isBreaking) {
+      setGitmoji(BREAKING_GITMOJI);
+    } else if (TYPE_TO_GITMOJI[data.type]) {
+      setGitmoji(TYPE_TO_GITMOJI[data.type]);
+    }
+
     if (data.scope && !cachedScopes.includes(data.scope)) {
       handleAddScope(data.scope);
     }
@@ -141,6 +176,7 @@ export default function App() {
   // Reset form
   const handleResetForm = () => {
     setType('feat');
+    setGitmoji(TYPE_TO_GITMOJI['feat'] || ':sparkles:');
     setScope('');
     setIsBreaking(false);
     setDescription('');
@@ -162,9 +198,8 @@ export default function App() {
       type,
       scope,
     };
-    setHistory([newEntry, ...history.slice(0, 49)]); // keep latest 50
+    setHistory([newEntry, ...history.slice(0, 49)]);
 
-    // Also cache the scope if provided
     if (scope.trim()) {
       handleAddScope(scope.trim());
     }
@@ -180,6 +215,10 @@ export default function App() {
     issues,
     customFooters,
     coAuthors,
+    useGitmoji,
+    gitmoji,
+    gitmojiFormat,
+    gitmojiPosition,
   };
 
   return (
@@ -199,16 +238,20 @@ export default function App() {
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              Generate Standard Conventional Commits
+              Conventional Commit Generator
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-              Construct clean, semantic commit messages adhering strictly to the Conventional Commits 1.0.0 specification with automated SemVer tracking, git trailers, and cached scopes.
+              Construct clean, semantic commit messages adhering to the Conventional Commits 1.0.0 specification with gitmoji.dev support, automated SemVer tracking, git trailers, and cached scopes.
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Semantic Versioning Ready
+              SemVer v2.0.0
+            </span>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+              <span>✨</span>
+              <span>Gitmoji Enabled</span>
             </span>
           </div>
         </div>
@@ -220,7 +263,22 @@ export default function App() {
             {/* 1. Commit Type */}
             <TypeSelector
               selectedType={type}
-              onSelectType={(newType) => setType(newType)}
+              onSelectType={handleSelectType}
+            />
+
+            {/* Gitmoji Picker & Configuration */}
+            <GitmojiPicker
+              useGitmoji={useGitmoji}
+              onToggleUseGitmoji={setUseGitmoji}
+              gitmoji={gitmoji}
+              onSelectGitmoji={setGitmoji}
+              gitmojiFormat={gitmojiFormat}
+              onChangeFormat={setGitmojiFormat}
+              gitmojiPosition={gitmojiPosition}
+              onChangePosition={setGitmojiPosition}
+              autoSyncType={autoSyncGitmoji}
+              onToggleAutoSync={setAutoSyncGitmoji}
+              currentType={type}
             />
 
             {/* 2. Scope & LocalStorage Cache */}
@@ -238,7 +296,7 @@ export default function App() {
               description={description}
               onChangeDescription={setDescription}
               isBreaking={isBreaking}
-              onToggleBreaking={setIsBreaking}
+              onToggleBreaking={handleToggleBreaking}
               type={type}
               scope={scope}
             />
@@ -282,7 +340,7 @@ export default function App() {
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-500">
         <p>
-          Adheres to <a href="https://www.conventionalcommits.org" target="_blank" rel="noreferrer" className="text-indigo-500 hover:underline">Conventional Commits 1.0.0</a> &middot; Built with React and Tailwind CSS &middot; All scopes cached locally in your browser
+          Adheres to <a href="https://www.conventionalcommits.org" target="_blank" rel="noreferrer" className="text-indigo-500 hover:underline">Conventional Commits 1.0.0</a> &middot; Powered by <a href="https://gitmoji.dev" target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">gitmoji.dev</a> &middot; Built with React & Tailwind CSS
         </p>
       </footer>
 

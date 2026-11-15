@@ -10,7 +10,7 @@ import {
   FileCode,
   Share2
 } from 'lucide-react';
-import { formatCommit, generateGitCommand, validateCommit } from '../utils/commitFormatter';
+import { formatCommit, generateGitCommand, validateCommit, resolveGitmoji } from '../utils/commitFormatter';
 import GitGraphPreview from './GitGraphPreview';
 
 export default function PreviewCard({
@@ -20,7 +20,7 @@ export default function PreviewCard({
   const [copySuccess, setCopySuccess] = useState('');
   const [commandStyle, setCommandStyle] = useState('raw'); // 'raw' | 'multiple-m' | 'single' | 'heredoc'
 
-  const { header, body, footers, fullMessage } = formatCommit(commitData);
+  const { header, body, footers, fullMessage, resolvedEmoji } = formatCommit(commitData);
   const gitCommand = generateGitCommand(commitData, commandStyle === 'raw' ? 'multiple-m' : commandStyle);
   const validationIssues = validateCommit(commitData);
 
@@ -109,17 +109,39 @@ export default function PreviewCard({
         <div className="p-4 sm:p-5 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto min-h-[140px] select-text">
           {commandStyle === 'raw' ? (
             <div className="space-y-4">
-              {/* Header Line */}
-              <div>
+              {/* Header Line with Gitmoji highlighting */}
+              <div className="flex flex-wrap items-baseline gap-x-1">
+                {/* Prefix Gitmoji if position is 'before-type' */}
+                {commitData.useGitmoji && resolvedEmoji && commitData.gitmojiPosition === 'before-type' && (
+                  <span className="text-amber-400 font-bold mr-1">
+                    {resolvedEmoji}
+                  </span>
+                )}
+
+                {/* Type */}
                 <span className="font-bold text-indigo-400">{commitData.type}</span>
+
+                {/* Scope */}
                 {commitData.scope && (
                   <span className="text-cyan-400">({commitData.scope})</span>
                 )}
+
+                {/* Breaking Change mark */}
                 {commitData.isBreaking && (
                   <span className="font-extrabold text-rose-500">!</span>
                 )}
-                <span className="text-slate-400 font-bold">: </span>
-                <span className="text-white font-medium">
+
+                <span className="text-slate-400 font-bold">:</span>
+
+                {/* Gitmoji after type */}
+                {commitData.useGitmoji && resolvedEmoji && commitData.gitmojiPosition !== 'before-type' && (
+                  <span className="text-amber-400 font-bold mx-1">
+                    {resolvedEmoji}
+                  </span>
+                )}
+
+                {/* Description */}
+                <span className="text-white font-medium ml-1">
                   {commitData.description || (
                     <span className="text-slate-600 italic">your commit description...</span>
                   )}
@@ -221,6 +243,10 @@ export default function PreviewCard({
         scope={commitData.scope}
         isBreaking={commitData.isBreaking}
         description={commitData.description}
+        useGitmoji={commitData.useGitmoji}
+        gitmoji={commitData.gitmoji}
+        gitmojiFormat={commitData.gitmojiFormat}
+        gitmojiPosition={commitData.gitmojiPosition}
       />
 
       {/* Linter & Best Practice Feedback */}

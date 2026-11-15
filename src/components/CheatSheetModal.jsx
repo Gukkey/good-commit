@@ -115,6 +115,34 @@ export default function CheatSheetModal({ isOpen, onClose }) {
             </div>
           </div>
 
+          {/* Gitmoji Guide */}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-slate-900 dark:text-white text-base flex items-center gap-1.5">
+              <span>Gitmoji Guide (gitmoji.dev)</span>
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Gitmojis provide an expressive and visual way of identifying the purpose or intention of a commit.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 font-mono">
+                <span className="text-base">✨ :sparkles:</span>
+                <p className="font-sans text-[11px] text-slate-500 mt-0.5">New features (feat)</p>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 font-mono">
+                <span className="text-base">🐛 :bug:</span>
+                <p className="font-sans text-[11px] text-slate-500 mt-0.5">Bug fixes (fix)</p>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 font-mono">
+                <span className="text-base">💥 :boom:</span>
+                <p className="font-sans text-[11px] text-slate-500 mt-0.5">Breaking changes (!)</p>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 font-mono">
+                <span className="text-base">📝 :memo:</span>
+                <p className="font-sans text-[11px] text-slate-500 mt-0.5">Documentation (docs)</p>
+              </div>
+            </div>
+          </div>
+
           {/* Rules and Best Practices */}
           <div className="space-y-2">
             <h4 className="font-semibold text-slate-900 dark:text-white text-base">

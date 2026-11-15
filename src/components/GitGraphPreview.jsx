@@ -1,14 +1,19 @@
 import React from 'react';
-import { GitBranch, GitCommit, GitMerge, User, Clock } from 'lucide-react';
+import { GitBranch, GitCommit, User, Clock } from 'lucide-react';
+import { resolveGitmoji } from '../utils/commitFormatter';
 
 export default function GitGraphPreview({
   type,
   scope,
   isBreaking,
   description,
-  accentColor,
+  useGitmoji,
+  gitmoji,
+  gitmojiFormat,
+  gitmojiPosition,
 }) {
   const displayDesc = description || 'your commit message will appear here...';
+  const emojiStr = useGitmoji && gitmoji ? resolveGitmoji(gitmoji, gitmojiFormat) : '';
 
   return (
     <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200">
@@ -41,6 +46,12 @@ export default function GitGraphPreview({
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-amber-400 font-bold">f4b910a</span>
             <span className="text-slate-500">-</span>
+
+            {/* Prefix emoji */}
+            {useGitmoji && emojiStr && gitmojiPosition === 'before-type' && (
+              <span>{emojiStr}</span>
+            )}
+
             <span className="font-semibold text-indigo-400">{type}</span>
             {scope && (
               <span className="text-cyan-400">({scope})</span>
@@ -49,6 +60,12 @@ export default function GitGraphPreview({
               <span className="text-rose-400 font-bold">!</span>
             )}
             <span className="text-slate-400">:</span>
+
+            {/* In-description emoji */}
+            {useGitmoji && emojiStr && gitmojiPosition !== 'before-type' && (
+              <span>{emojiStr}</span>
+            )}
+
             <span className="text-slate-100 truncate max-w-sm sm:max-w-md">
               {displayDesc}
             </span>
@@ -72,7 +89,7 @@ export default function GitGraphPreview({
           <div className="text-xs font-mono flex items-center gap-1.5 text-slate-400">
             <span className="text-slate-500 font-bold">8e1d2c4</span>
             <span>-</span>
-            <span>chore: setup initial repository structure</span>
+            <span>🎉 chore: setup initial repository structure</span>
           </div>
         </div>
       </div>

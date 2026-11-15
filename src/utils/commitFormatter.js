@@ -1,3 +1,17 @@
+import { GITMOJIS } from '../constants/gitmojis';
+
+/**
+ * Resolves a gitmoji code or emoji into the requested format ('code' | 'emoji')
+ */
+export function resolveGitmoji(gitmojiStr, format = 'emoji') {
+  if (!gitmojiStr) return '';
+  const item = GITMOJIS.find(
+    (g) => g.code === gitmojiStr || g.emoji === gitmojiStr || g.name === gitmojiStr
+  );
+  if (!item) return gitmojiStr;
+  return format === 'code' ? item.code : item.emoji;
+}
+
 /**
  * Formats conventional commit parts into standard string and git commands
  */
@@ -11,19 +25,35 @@ export function formatCommit({
   issues = [],
   customFooters = [],
   coAuthors = [],
+  useGitmoji = false,
+  gitmoji = '',
+  gitmojiFormat = 'emoji', // 'emoji' | 'code'
+  gitmojiPosition = 'after-type', // 'after-type' | 'before-type'
 }) {
   const cleanScope = scope.trim();
   const cleanDesc = description.trim();
+  const resolvedEmoji = useGitmoji && gitmoji ? resolveGitmoji(gitmoji, gitmojiFormat) : '';
 
-  // Header construction
-  let header = type;
+  // Core header part: <type>(<scope>)!
+  let corePrefix = type;
   if (cleanScope) {
-    header += `(${cleanScope})`;
+    corePrefix += `(${cleanScope})`;
   }
   if (isBreaking) {
-    header += '!';
+    corePrefix += '!';
   }
-  header += cleanDesc ? `: ${cleanDesc}` : ': ';
+
+  // Construct complete header with gitmoji
+  let header = '';
+  if (resolvedEmoji) {
+    if (gitmojiPosition === 'before-type') {
+      header = `${resolvedEmoji} ${corePrefix}: ${cleanDesc}`.trim();
+    } else {
+      header = `${corePrefix}: ${resolvedEmoji} ${cleanDesc}`.trim();
+    }
+  } else {
+    header = `${corePrefix}: ${cleanDesc}`.trim();
+  }
 
   // Footers list
   const footers = [];
@@ -72,6 +102,8 @@ export function formatCommit({
 
   return {
     header,
+    corePrefix,
+    resolvedEmoji,
     body: cleanBody,
     footers,
     fullMessage,
@@ -85,7 +117,6 @@ export function generateGitCommand(commitData, style = 'multiple-m') {
   const { header, body, footers, fullMessage } = formatCommit(commitData);
 
   if (style === 'single') {
-    // Escaped single line
     const escaped = fullMessage.replace(/"/g, '\\"');
     return `git commit -m "${escaped}"`;
   }
@@ -118,6 +149,10 @@ export function validateCommit({
   description,
   body,
   breakingDescription,
+  useGitmoji,
+  gitmoji,
+  gitmojiFormat,
+  gitmojiPosition,
 }) {
   const issues = [];
   const cleanDesc = (description || '').trim();
@@ -130,13 +165,16 @@ export function validateCommit({
   if (!cleanDesc) {
     issues.push({ level: 'error', message: 'Short description is required.' });
   } else {
-    // Check first letter capitalization
-    const firstChar = cleanDesc.charAt(0);
-    if (firstChar === firstChar.toUpperCase() && firstChar !== firstChar.toLowerCase() && isNaN(firstChar)) {
-      issues.push({
-        level: 'warning',
-        message: 'Prefer lowercase for the first word in description (e.g. "add" instead of "Add").',
-      });
+    // Check first letter capitalization (ignoring any leading emoji/symbols)
+    const firstAlpha = cleanDesc.match(/[a-zA-Z]/);
+    if (firstAlpha && firstAlpha.index === 0) {
+      const char = firstAlpha[0];
+      if (char === char.toUpperCase() && char !== char.toLowerCase()) {
+        issues.push({
+          level: 'warning',
+          message: 'Prefer lowercase for the first word in description (e.g. "add" instead of "Add").',
+        });
+      }
     }
 
     // Check trailing period
@@ -147,8 +185,18 @@ export function validateCommit({
       });
     }
 
-    // Check header length
-    let headerLength = type.length + (cleanScope ? cleanScope.length + 2 : 0) + (isBreaking ? 1 : 0) + 2 + cleanDesc.length;
+    const { header } = formatCommit({
+      type,
+      scope,
+      isBreaking,
+      description,
+      useGitmoji,
+      gitmoji,
+      gitmojiFormat,
+      gitmojiPosition,
+    });
+
+    const headerLength = header.length;
     if (headerLength > 72) {
       issues.push({
         level: 'warning',
