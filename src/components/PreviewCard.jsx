@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Copy, 
   Check, 
@@ -11,11 +11,44 @@ import {
   TerminalSquare
 } from 'lucide-react';
 import { formatCommit, validateCommit } from '../utils/commitFormatter';
+import { GITMOJIS } from '../constants/gitmojis';
 import GitGraphPreview from './GitGraphPreview';
+
+// Longest tokens first so multi-codepoint emojis are stripped before their prefixes.
+const GITMOJI_TOKENS = [
+  ...new Set(
+    GITMOJIS.flatMap((g) => [
+      g.emoji,
+      g.emoji.replace(/\uFE0F/g, ''),
+      g.code,
+    ])
+  ),
+]
+  .filter(Boolean)
+  .sort((a, b) => b.length - a.length);
+
+function stripLeadingGitmoji(text) {
+  const trimmed = text.trimStart();
+  const token = GITMOJI_TOKENS.find((candidate) => trimmed.startsWith(candidate));
+  return token ? trimmed.slice(token.length).trimStart() : trimmed;
+}
+
+/**
+ * Extracts the plain subject from a header the user may have hand-edited,
+ * removing any conventional prefix / gitmoji that is still present.
+ */
+function extractSubject(headerLine) {
+  let subject = stripLeadingGitmoji(headerLine);
+  subject = subject.replace(/^[a-zA-Z][\w-]*(?:\([^)]*\))?!?:\s*/, '');
+  subject = stripLeadingGitmoji(subject);
+  return subject.trim();
+}
 
 export default function PreviewCard({
   commitData,
   onSaveToHistory,
+  headerSyncKey = 0,
+  resetKey = 0,
 }) {
   const [copySuccess, setCopySuccess] = useState('');
   const [message, setMessage] = useState('');
@@ -24,12 +57,61 @@ export default function PreviewCard({
   const { fullMessage } = formatCommit(commitData);
   const validationIssues = validateCommit(commitData);
 
-  // Sync textarea whenever generator options change, unless user manually tweaked it
+  // Keep the previous generated message around so manual edits can be merged
+  // with new type/gitmoji selections instead of being frozen until "Re-sync".
+  const previousGeneratedRef = useRef({
+    fullMessage,
+    headerSyncKey,
+    description: commitData.description,
+  });
+
   useEffect(() => {
+    const previous = previousGeneratedRef.current;
+    previousGeneratedRef.current = {
+      fullMessage,
+      headerSyncKey,
+      description: commitData.description,
+    };
+
     if (!isManuallyEdited) {
       setMessage(fullMessage);
+      return;
     }
-  }, [fullMessage, isManuallyEdited]);
+
+    const previousHeader = previous.fullMessage.split('\n')[0].trim();
+    const nextGeneratedHeader = fullMessage.split('\n')[0].trim();
+    const headerChanged = nextGeneratedHeader !== previousHeader;
+    const headerControlClicked = previous.headerSyncKey !== headerSyncKey;
+
+    if (!headerChanged && !headerControlClicked) return;
+
+    setMessage((current) => {
+      // The user cleared the message; regenerate it from the form.
+      if (!current.trim()) return fullMessage;
+
+      const [currentHeader, ...rest] = current.split('\n');
+      const headerWasEdited = currentHeader.trim() !== previousHeader;
+      const descriptionWasEdited =
+        commitData.description !== previous.description;
+
+      // If the user hand-edited the subject in the message, keep that text
+      // when re-applying type/gitmoji unless they also changed the form field.
+      const subject =
+        headerWasEdited && !descriptionWasEdited
+          ? extractSubject(currentHeader)
+          : commitData.description;
+
+      const { header } = formatCommit({ ...commitData, description: subject });
+      return [header, ...rest].join('\n');
+    });
+  }, [fullMessage, headerSyncKey, isManuallyEdited]);
+
+  // A full form reset or template load replaces the editable message entirely.
+  useEffect(() => {
+    if (!resetKey) return;
+    setMessage(fullMessage);
+    setIsManuallyEdited(false);
+  }, [resetKey]);
 
   // When user edits the message directly in the textarea
   const handleTextareaChange = (e) => {
@@ -210,7 +292,7 @@ export default function PreviewCard({
         type={commitData.type}
         scope={commitData.scope}
         isBreaking={commitData.isBreaking}
-        description={isManuallyEdited ? message.split('\n')[0] : commitData.description}
+        description={isManuallyEdited ? extractSubject(message.split('\n')[0]) : commitData.description}
         useGitmoji={commitData.useGitmoji}
         gitmoji={commitData.gitmoji}
         gitmojiFormat={commitData.gitmojiFormat}

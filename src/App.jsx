@@ -61,6 +61,17 @@ export default function App() {
   const [isCheatSheetOpen, setIsCheatSheetOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
+  // Bumped whenever a header-related control is clicked. This lets the preview
+  // re-apply the selected type/gitmoji even when the value itself did not change
+  // (e.g. the user deleted them from the editable message first).
+  const [headerSyncKey, setHeaderSyncKey] = useState(0);
+  const bumpHeaderSync = () => setHeaderSyncKey((key) => key + 1);
+
+  // Bumped when the whole form is replaced (reset or template), so the editable
+  // preview can be regenerated from scratch instead of merged.
+  const [messageResetKey, setMessageResetKey] = useState(0);
+  const resetEditableMessage = () => setMessageResetKey((key) => key + 1);
+
   // Auto-sync gitmoji when type changes if autoSync is active
   const handleSelectType = (newType) => {
     setType(newType);
@@ -71,6 +82,12 @@ export default function App() {
         setGitmoji(TYPE_TO_GITMOJI[newType]);
       }
     }
+    bumpHeaderSync();
+  };
+
+  const handleSelectGitmoji = (newGitmoji) => {
+    setGitmoji(newGitmoji);
+    bumpHeaderSync();
   };
 
   const handleToggleBreaking = (breaking) => {
@@ -168,6 +185,9 @@ export default function App() {
       setGitmoji(TYPE_TO_GITMOJI[data.type]);
     }
 
+    bumpHeaderSync();
+    resetEditableMessage();
+
     if (data.scope && !cachedScopes.includes(data.scope)) {
       handleAddScope(data.scope);
     }
@@ -185,6 +205,8 @@ export default function App() {
     setIssues([]);
     setCoAuthors([]);
     setCustomFooters([]);
+    bumpHeaderSync();
+    resetEditableMessage();
   };
 
   // Save to history
@@ -271,7 +293,7 @@ export default function App() {
               useGitmoji={useGitmoji}
               onToggleUseGitmoji={setUseGitmoji}
               gitmoji={gitmoji}
-              onSelectGitmoji={setGitmoji}
+              onSelectGitmoji={handleSelectGitmoji}
               gitmojiFormat={gitmojiFormat}
               onChangeFormat={setGitmojiFormat}
               gitmojiPosition={gitmojiPosition}
@@ -332,6 +354,8 @@ export default function App() {
             <PreviewCard
               commitData={commitData}
               onSaveToHistory={handleSaveToHistory}
+              headerSyncKey={headerSyncKey}
+              resetKey={messageResetKey}
             />
           </div>
         </div>
