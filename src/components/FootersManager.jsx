@@ -113,40 +113,17 @@ export default function FootersManager({
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                 No issues linked yet. You can automatically close or reference PRs and issues.
               </p>
-              <div className="flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAddIssue();
-                    onUpdateIssue(0, 'action', 'Closes');
-                    onUpdateIssue(0, 'reference', '#1');
-                  }}
-                  className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  + Closes #...
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAddIssue();
-                    onUpdateIssue(0, 'action', 'Fixes');
-                    onUpdateIssue(0, 'reference', '#1');
-                  }}
-                  className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  + Fixes #...
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAddIssue();
-                    onUpdateIssue(0, 'action', 'Resolves');
-                    onUpdateIssue(0, 'reference', '#1');
-                  }}
-                  className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  + Resolves #...
-                </button>
+              <div className="flex flex-wrap justify-center gap-2">
+                {ISSUE_ACTION_TYPES.map((action) => (
+                  <button
+                    key={action.value}
+                    type="button"
+                    onClick={() => onAddIssue(action.value, '')}
+                    className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    + {action.label} #...
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -315,33 +292,21 @@ export default function FootersManager({
               <div className="flex flex-wrap justify-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    onAddCustomFooter();
-                    onUpdateCustomFooter(0, 'token', 'Signed-off-by');
-                    onUpdateCustomFooter(0, 'value', '');
-                  }}
+                  onClick={() => onAddCustomFooter('Signed-off-by', '')}
                   className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   + Signed-off-by
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    onAddCustomFooter();
-                    onUpdateCustomFooter(0, 'token', 'Reviewed-by');
-                    onUpdateCustomFooter(0, 'value', '');
-                  }}
+                  onClick={() => onAddCustomFooter('Reviewed-by', '')}
                   className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   + Reviewed-by
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    onAddCustomFooter();
-                    onUpdateCustomFooter(0, 'token', 'Migration-Guide');
-                    onUpdateCustomFooter(0, 'value', '');
-                  }}
+                  onClick={() => onAddCustomFooter('Migration-Guide', '')}
                   className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   + Migration-Guide

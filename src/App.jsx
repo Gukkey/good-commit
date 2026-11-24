@@ -119,48 +119,54 @@ export default function App() {
   };
 
   // Issue handlers
-  const handleAddIssue = () => {
-    setIssues([...issues, { action: 'Closes', reference: '' }]);
+  const handleAddIssue = (action = 'Closes', reference = '') => {
+    setIssues((current) => [...current, { action, reference }]);
   };
 
   const handleUpdateIssue = (index, field, val) => {
-    const updated = [...issues];
-    updated[index][field] = val;
-    setIssues(updated);
+    setIssues((current) =>
+      current.map((issue, i) =>
+        i === index ? { ...issue, [field]: val } : issue
+      )
+    );
   };
 
   const handleRemoveIssue = (index) => {
-    setIssues(issues.filter((_, i) => i !== index));
+    setIssues((current) => current.filter((_, i) => i !== index));
   };
 
   // Co-author handlers
   const handleAddCoAuthor = () => {
-    setCoAuthors([...coAuthors, { name: '', email: '' }]);
+    setCoAuthors((current) => [...current, { name: '', email: '' }]);
   };
 
   const handleUpdateCoAuthor = (index, field, val) => {
-    const updated = [...coAuthors];
-    updated[index][field] = val;
-    setCoAuthors(updated);
+    setCoAuthors((current) =>
+      current.map((author, i) =>
+        i === index ? { ...author, [field]: val } : author
+      )
+    );
   };
 
   const handleRemoveCoAuthor = (index) => {
-    setCoAuthors(coAuthors.filter((_, i) => i !== index));
+    setCoAuthors((current) => current.filter((_, i) => i !== index));
   };
 
   // Custom footer handlers
-  const handleAddCustomFooter = () => {
-    setCustomFooters([...customFooters, { token: '', value: '' }]);
+  const handleAddCustomFooter = (token = '', value = '') => {
+    setCustomFooters((current) => [...current, { token, value }]);
   };
 
   const handleUpdateCustomFooter = (index, field, val) => {
-    const updated = [...customFooters];
-    updated[index][field] = val;
-    setCustomFooters(updated);
+    setCustomFooters((current) =>
+      current.map((footer, i) =>
+        i === index ? { ...footer, [field]: val } : footer
+      )
+    );
   };
 
   const handleRemoveCustomFooter = (index) => {
-    setCustomFooters(customFooters.filter((_, i) => i !== index));
+    setCustomFooters((current) => current.filter((_, i) => i !== index));
   };
 
   // Template loader
